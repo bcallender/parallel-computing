@@ -1,0 +1,112 @@
+#!/usr/bin/python3
+
+from random import random, randint, choice
+from subprocess import call
+
+
+
+def create_nodes(num_nodes, sparseness, filename, span):
+    graph = dict()
+    span = list(span)
+    for i in range(0, num_nodes):
+        graph[i] = dict()
+        for j in range(0, num_nodes):
+            if i == j:
+                graph[i][j] = 0
+            elif random() < sparseness:
+                graph[i][j] = 10000000
+            else:
+                graph[i][j] = choice(span)
+    print_graph(graph, filename)
+    return graph
+
+
+def import_graph(filename):
+    graph = dict()
+    f = open(filename, "r")
+    num_nodes = int(f.readline().rstrip())
+    line = f.readline()
+    row = 0
+    while line is not "":
+        graph[row] = dict()
+        line = line.rstrip()
+        tokens = line.split(" ")
+        for col, token in enumerate(tokens):
+            graph[row][col] = int(token.rstrip())
+        row += 1
+        line = f.readline()
+    return graph
+
+
+def floyd_warshall(graph, filename):
+    results = dict(graph)
+    num_nodes = len(list(results.keys()))
+    for k in range(0, num_nodes):
+        for i in range(0, num_nodes):
+            for j in range(0, num_nodes):
+                test_result = results[i][k] + results[k][j]
+                current_shortest = results[i][j]
+                if results[i][j] > test_result:
+                    results[i][j] = test_result
+
+    for i in results.keys():
+        if results[i][i] < 0:
+            raise Exception("Negative-cost cycle found in graph. Exiting.")
+    print_graph(results, filename)
+    return results
+
+
+def print_graph(graph, filename):
+    f = open(filename, 'w+')
+    num_nodes = len(list(graph.keys()))
+    print(str(num_nodes), file=f)
+    for i in range(0, num_nodes):
+        for j in range(0, num_nodes):
+            print(graph[i][j], end=' ', file=f)
+        print(file=f)
+
+
+def fw(g):
+    vertices = g.keys()
+
+    print("Test point 1 - Running algorithm")
+    d = dict(g)  # copy g
+    for k in vertices:
+        for i in vertices:
+            for j in vertices:
+                d[i][j] = min(d[i][j], d[i][k] + d[k][j])
+
+    print("Test point 2 - negative cycle checks")
+    # Check for a negative-length cycle
+    for i in vertices:
+        if d[i][i] < 0:
+            print("Negative-cost cycle found in graph. Exiting.")
+            return "Negative length cycle"
+    return d
+    # print("Test point 3 - finding shortest shortest path")
+    # # Return shortest shortest path
+    # minimum = float("inf")
+    # for i in vertices:
+    #     for j in vertices:
+    #         if d[i][j] < minimum:
+    #             minimum = d[i][j]
+    # return minimum
+
+test_vals = [16, 32, 64, 128, 256, 512, 1024]
+
+for val in test_vals:
+    g = create_nodes(val, 0.8, "graphInput" + str(val), range(0, 25))
+    og = floyd_warshall(g, "graphOutputReference" + str(val))
+    time = call(["./CLionTest", "-i", "graphInput" + str(val), "-o", "graphOutputTest" + str(val)])
+    tg = import_graph("graphOutputTest" + str(val))
+    if tg == og:
+        print("{0} Passed in {1}!".format(val, time))
+    else:
+        print("{0} Failed in {1}!".format(val, time))
+
+
+#d = fw(g)
+#print_graph(d, "referenceOutput")
+# tg = import_graph("graphOutput")
+
+
